@@ -2,7 +2,6 @@
 # originally in functions.jl
 # Claudia February 2015
 #####################
-
 function setCHECKNET(b::Bool)
     global CHECKNET
     CHECKNET = b
@@ -24,7 +23,7 @@ function binom(n::Number,k::Number)
     binom(n-1,k-1) + binom(n-1,k) #recursive call
 end
 
-function approxEq(a::Number,b::Number,absTol::Number,relTol::Number)
+ function approxEq(a::Number,b::Number,absTol::Number,relTol::Number)
     if(a<eps() || b<eps())
         abs(a-b) < absTol
     else
@@ -32,20 +31,20 @@ function approxEq(a::Number,b::Number,absTol::Number,relTol::Number)
     end
 end
 
-approxEq(a::Number,b::Number) = approxEq(a,b,1e-5,100)
+ approxEq(a::Number,b::Number) = approxEq(a,b,1e-5,100)
 
 # isEqual functions: to test if 2 edges (or 2 nodes etc.) "look" alike.
 #                    Useful after a deepcopy of a network.
 # For nodes (or edges etc.) in the same network, use instead n1 == n2 or n1 != n2.
-function isEqual(n1::Node,n2::Node)
+ function isEqual(n1::Node,n2::Node)
     return (n1.number == n2.number && approxEq(n1.gammaz,n2.gammaz) && n1.inCycle == n2.inCycle)
 end
 
-function isEqual(n1::Edge,n2::Edge)
+ function isEqual(n1::Edge,n2::Edge)
     return (n1.number == n2.number && approxEq(n1.length,n2.length))
 end
 
-function isEqual(net1::HybridNetwork, net2::HybridNetwork)
+ function isEqual(net1::HybridNetwork, net2::HybridNetwork)
     result = true
     result &= (net1.numTaxa == net2.numTaxa)
     result &= (net1.numNodes == net2.numNodes)
@@ -171,128 +170,126 @@ function getOtherNode(edge::Edge,node::Node)
   isequal(edge.node[1],node) ? edge.node[2] : edge.node[1]
 end
 # -------------- NETWORK ----------------------- #
+	 function getIndex(node::Node, net::Network)
+				i = 1;
+			while(i<= size(net.node,1) && !isEqual(node,net.node[i]))
+					i = i+1;
+			end
+			i>size(net.node,1)?error("node $(node.number) not in network"):return i;
+	end
 
-function getIndex(node::Node, net::Network)
-    i = 1;
-    while(i<= size(net.node,1) && !isEqual(node,net.node[i]))
-        i = i+1;
-    end
-    i>size(net.node,1)?error("node $(node.number) not in network"):return i;
-end
+	 function getIndex(edge::Edge, net::Network)
+			i = 1;
+			while(i<= size(net.edge,1) && !isEqual(edge,net.edge[i]))
+					i = i+1;
+			end
+			i>size(net.edge,1)?error("edge $(edge.number) not in network"):return i;
+	end
 
-function getIndex(edge::Edge, net::Network)
-    i = 1;
-    while(i<= size(net.edge,1) && !isEqual(edge,net.edge[i]))
-        i = i+1;
-    end
-    i>size(net.edge,1)?error("edge $(edge.number) not in network"):return i;
-end
+	 function getIndex(edge::Edge, edges::Vector{Edge})
+			i = 1;
+			while(i<= size(edges,1) && !isEqual(edge,edges[i]))
+					i = i+1;
+			end
+			i>size(edges,1)?error("edge $(edge.number) not in array of edges"):return i;
+	end
 
-function getIndex(edge::Edge, edges::Vector{Edge})
-    i = 1;
-    while(i<= size(edges,1) && !isEqual(edge,edges[i]))
-        i = i+1;
-    end
-    i>size(edges,1)?error("edge $(edge.number) not in array of edges"):return i;
-end
+	 function getIndex(bool::Bool, array::Array{Bool,1})
+			i = 1;
+			while(i<= size(array,1) && !isequal(bool,array[i]))
+					i = i+1;
+			end
+			i>size(array,1)?error("$(bool) not in array"):return i;
+	end
 
-function getIndex(bool::Bool, array::Array{Bool,1})
-    i = 1;
-    while(i<= size(array,1) && !isequal(bool,array[i]))
-        i = i+1;
-    end
-    i>size(array,1)?error("$(bool) not in array"):return i;
-end
+	 function getIndex(bool::Bool, array::Array{Bool,1})
+			i = 1;
+			while(i<= size(array,1) && !isequal(bool,array[i]))
+					i = i+1;
+			end
+			i>size(array,1)?error("$(bool) not in array"):return i;
+	end
 
-function getIndex(bool::Bool, array::Array{Bool,1})
-    i = 1;
-    while(i<= size(array,1) && !isequal(bool,array[i]))
-        i = i+1;
-    end
-    i>size(array,1)?error("$(bool) not in array"):return i;
-end
+	 function getIndex(bool::Bool, array::Array{Any,1})
+			i = 1;
+			while(i<= size(array,1) && !isequal(bool,array[i]))
+					i = i+1;
+			end
+			i>size(array,1)?error("$(bool) not in array"):return i;
+	end
 
-function getIndex(bool::Bool, array::Array{Any,1})
-    i = 1;
-    while(i<= size(array,1) && !isequal(bool,array[i]))
-        i = i+1;
-    end
-    i>size(array,1)?error("$(bool) not in array"):return i;
-end
+	# aux function to find the index of a string in a
+	# string array
+	 function getIndex(name::AbstractString, array::Array{ASCIIString,1})
+			i = 1;
+			while(i<= size(array,1) && !isequal(name,array[i]))
+					i = i+1;
+			end
+			i>size(array,1)?error("$(name) not in array"):return i;
+	end
 
-
-# aux function to find the index of a string in a
-# string array
-function getIndex(name::AbstractString, array::Array{ASCIIString,1})
-    i = 1;
-    while(i<= size(array,1) && !isequal(name,array[i]))
-        i = i+1;
-    end
-    i>size(array,1)?error("$(name) not in array"):return i;
-end
-
-# aux function to find the index of a int in an int array.
-# But findfirst can do that as well, and probably more efficiently (returning 0 if not found)
-function getIndex(name::Integer, array::Array{Int,1})
-    i = 1;
-    while(i<= size(array,1) && !isequal(name,array[i]))
-        i = i+1;
-    end
-    i>size(array,1)?error("$(name) not in array"):return i;
-end
+	# aux function to find the index of a int in an int array.
+	# But findfirst can do that as well, and probably more efficiently (returning 0 if not found)
+	 function getIndex(name::Integer, array::Array{Int,1})
+			i = 1;
+			while(i<= size(array,1) && !isequal(name,array[i]))
+					i = i+1;
+			end
+			i>size(array,1)?error("$(name) not in array"):return i;
+	end
 
 
-# aux function to find the index of a node in a
-# node array
-function getIndex(name::Node, array::Array{Node,1})
-    i = 1;
-    while(i<= size(array,1) && !isequal(name,array[i]))
-        i = i+1;
-    end
-    i>size(array,1)?error("$(name.number) not in array"):return i;
-end
+	# aux function to find the index of a node in a
+	# node array
+	 function getIndex(name::Node, array::Array{Node,1})
+			i = 1;
+			while(i<= size(array,1) && !isequal(name,array[i]))
+					i = i+1;
+			end
+			i>size(array,1)?error("$(name.number) not in array"):return i;
+	end
 
 
-function getIndexNode(number::Integer,net::Network)
-    ind = findfirst([number==n.number for n in net.node])
-    if ind==0
-        error("node number not in net.node")
-    end
-    return ind
-end
+	 function getIndexNode(number::Integer,net::Network)
+			ind = findfirst([number==n.number for n in net.node])
+			if ind==0
+					error("node number not in net.node")
+			end
+			return ind
+	end
 
-function getIndexEdge(number::Integer,net::Network)
-    ind = findfirst([number==n.number for n in net.edge])
-    if ind==0
-        error("edge number not in net.edge")
-    end
-    return ind
-end
+	 function getIndexEdge(number::Integer,net::Network)
+			ind = findfirst([number==n.number for n in net.edge])
+			if ind==0
+					error("edge number not in net.edge")
+			end
+			return ind
+	end
 
-# find the index of an edge in node.edge
-function getIndexEdge(edge::Edge,node::Node)
-    getIndex(true,[isequal(edge,e) for e in node.edge])
-end
+	# find the index of an edge in node.edge
+	 function getIndexEdge(edge::Edge,node::Node)
+			getIndex(true,[isequal(edge,e) for e in node.edge])
+	end
 
-# find the index of an edge with given number in node.edge
-function getIndexEdge(number::Integer,node::Node)
-    getIndex(true,[isequal(edge,e) for e in node.edge])
-end
+	# find the index of an edge with given number in node.edge
+	 function getIndexEdge(number::Integer,node::Node)
+			getIndex(true,[isequal(edge,e) for e in node.edge])
+	end
 
-# find the index of a node in edge.node
-function getIndexNode(edge::Edge,node::Node)
-    size(edge.node,1) == 2 || warn("this edge $(edge.number) has more or less than 2 nodes: $([n.number for n in edge.node])")
-    if(isequal(node,edge.node[1]))
-        return 1
-    elseif(isequal(node,edge.node[2]))
-        return 2
-    else
-        error("node not in edge.node")
-    end
-end
+	# find the index of a node in edge.node
+	 function getIndexNode(edge::Edge,node::Node)
+			size(edge.node,1) == 2 || warn("this edge $(edge.number) has more or less than 2 nodes: $([n.number for n in edge.node])")
+			if(isequal(node,edge.node[1]))
+					return 1
+			elseif(isequal(node,edge.node[2]))
+					return 2
+			else
+					error("node not in edge.node")
+			end
+	end
 
 # function to find hybrid index in net.hybrid
-function getIndexHybrid(node::Node, net::Network)
+ function getIndexHybrid(node::Node, net::Network)
     node.hybrid || error("node $(node.number) is not hybrid so it cannot be in net.hybrid")
     i = 1;
     while(i<= size(net.hybrid,1) && !isEqual(node,net.hybrid[i]))
@@ -302,7 +299,7 @@ function getIndexHybrid(node::Node, net::Network)
 end
 
 # function to find leaf index in qnet.leaf
-function getIndexLeaf(node::Node, net::Network)
+ function getIndexLeaf(node::Node, net::Network)
     if(node.leaf)
         i = 1;
         while(i<= size(net.leaf,1) && !isEqual(node,net.leaf[i]))
@@ -354,7 +351,7 @@ end
 # function to check in a leaf is in an array by comparing
 # the numbers (uses isEqual)
 # needed for updateHasEdge
-function isNodeNumIn(node::Node,array::Array{Node,1})
+ function isNodeNumIn(node::Node,array::Array{Node,1})
     return all((e->!isEqual(node,e)), array) ? false : true
 end
 

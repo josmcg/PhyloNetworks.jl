@@ -9,7 +9,7 @@
 # aux function to make a hybrid node a tree node
 # used in deleteLeaf
 # input: hybrid node
-function makeNodeTree!(net::Network, hybrid::Node)
+ function makeNodeTree!(net::Network, hybrid::Node)
     hybrid.hybrid || error("cannot make node $(hybrid.number) tree node because it already is")
     DEBUG && println("we make node $(hybrid.number) a tree node, but it can still have hybrid edges pointing at it, hasHybEdge set to false")
     hybrid.gammaz = -1
@@ -26,7 +26,7 @@ end
 # aux function to make a hybrid edge tree edge
 # used in deleteLeaf
 # input: edge and hybrid node it pointed to
-function makeEdgeTree!(edge::Edge, node::Node)
+ function makeEdgeTree!(edge::Edge, node::Node)
     edge.hybrid || error("cannot make edge $(edge.number) tree because it is tree already")
     node.hybrid || error("need the hybrid node at which edge $(edge.number) is pointing to, node $(node.number) is tree node")
     DEBUG && println("we make edge $(edge.number) a tree edge, but it will still point to hybrid node $(node.number)")
@@ -50,7 +50,7 @@ end
 # calls deleteIntLeaf! inside a while
 # returns middle node (see ipad drawing)
 # negative=true allows negative branch lengths
-function deleteIntLeafWhile!(net::Network, middle::Node, leaf::Node, negative::Bool)
+ function deleteIntLeafWhile!(net::Network, middle::Node, leaf::Node, negative::Bool)
     while(size(middle.edge,1) == 2)
         middle = deleteIntLeaf!(net,middle,leaf, negative)
     end
@@ -63,7 +63,7 @@ deleteIntLeafWhile!(net::Network, middle::Node, leaf::Node) = deleteIntLeafWhile
 # more internal node with only two edges
 # calls deleteIntLeaf! inside a while
 # negative=true allows negative branch lengths
-function deleteIntLeafWhile!(net::Network, leafedge::Edge, leaf::Node, negative::Bool)
+ function deleteIntLeafWhile!(net::Network, leafedge::Edge, leaf::Node, negative::Bool)
     middle = getOtherNode(leafedge, leaf)
     while(size(middle.edge,1) == 2)
         middle = deleteIntLeaf!(net,middle,leaf, negative)
@@ -77,7 +77,7 @@ deleteIntLeafWhile!(net::Network, leafedge::Edge, leaf::Node) = deleteIntLeafWhi
 # returns the new middle
 # note: leafedge is the edge that survives
 # negative=true allows negative branch lengths
-function deleteIntLeaf!(net::Network, middle::Node, leaf::Node, negative::Bool)
+ function deleteIntLeaf!(net::Network, middle::Node, leaf::Node, negative::Bool)
     #println("calling deleteIntLeaf for middle $(middle.number) and leaf $(leaf.number)")
     if(size(middle.edge,1) == 2)
         if(isEqual(getOtherNode(middle.edge[1],middle),leaf))
@@ -110,7 +110,7 @@ deleteIntLeaf!(net::Network, middle::Node, leaf::Node) = deleteIntLeaf!(net, mid
 # returns the new middle
 # note: leafedge is the edge that survives
 # negative=true allows negative branch lengths
-function deleteIntLeaf!(net::Network, leafedge::Edge, leaf::Node, negative::Bool)
+ function deleteIntLeaf!(net::Network, leafedge::Edge, leaf::Node, negative::Bool)
     middle = getOtherNode(leafedge,leaf)
     if(size(middle.edge,1) == 2)
         if(isEqual(getOtherNode(middle.edge[1],middle),leaf))
@@ -139,7 +139,7 @@ deleteIntLeaf!(net::Network, leafedge::Edge, leaf::Node) = deleteIntLeaf!(net, l
 # fixit: still missing to test hybrid-> bad triangle II and
 #        normal case (not bad triangle/diamond) of hasHybEdge
 #        and normal case, delete not hybrid leaf bad triangle II
-function deleteLeaf!(net::Network, leaf::Node)
+ function deleteLeaf!(net::Network, leaf::Node)
     leaf.leaf || error("node $(leaf.number) is not a leaf, cannot delete it")
     isNodeNumIn(leaf,net.leaf) || error("node $(leaf.number) is not in net.leaf, cannot delete it")
     size(leaf.edge,1) == 1 || error("strange leaf $(leaf.number) with $(size(leaf.edge,1)) edges instead of 1")
@@ -379,7 +379,7 @@ end
 # function to update hasEdge attribute in a
 # QuartetNetwork after leaves deleted
 # with deleteLeaf!
-function updateHasEdge!(qnet::QuartetNetwork, net::HybridNetwork)
+ function updateHasEdge!(qnet::QuartetNetwork, net::HybridNetwork)
     #warn("function to compare edges depends on edges number being unique")
     edges = Bool[]
     h = Bool[]
@@ -459,7 +459,7 @@ end
 #        quartet: array with the 4 leaf nodes to keep
 # return: QuartetNetwork with only 4 tips
 # it updates qnet.hasEdge and qnet.indexht
-function extractQuartet(net::HybridNetwork,quartet::Array{Node,1})
+ function extractQuartet!(net::HybridNetwork,quartet::Array{Node,1})
     size(quartet,1) == 4 || error("quartet array should have 4 nodes, it has $(size(quartet,1))")
     (quartet[1].leaf && quartet[2].leaf && quartet[3].leaf && quartet[4].leaf) || error("all four nodes to keep when extracting the quartet should be leaves: $([q.number for q in quartet])")
     qnet = QuartetNetwork(net) # fixit: try to re-use memory? quartetTaxon has not changed for instance.
@@ -479,7 +479,7 @@ end
 # it calls the previous extractQuartet
 # returns qnet (check: maybe not needed later) and assigns
 # quartet.qnet = qnet
-function extractQuartet!(net::HybridNetwork, quartet::Quartet)
+ function extractQuartet!(net::HybridNetwork, quartet::Quartet)
     list = Node[]
     for(q in quartet.taxon)
         try
@@ -489,8 +489,8 @@ function extractQuartet!(net::HybridNetwork, quartet::Quartet)
         end
         push!(list, net.node[getIndexNode(getIndex(q,net.names),net)])
     end
-    qnet = extractQuartet(net,list)
-    DEBUG && println("EXTRACT: extracted quartet $(quartet.taxon)")
+    qnet = extractQuartet!(net,list)
+    DEBUG && println("EXTRACT_2: extracted quartet $(quartet.taxon)")
     redundantCycle!(qnet) #removes no leaves, cleans external edges
     updateHasEdge!(qnet,net)
     parameters!(qnet,net)
@@ -503,21 +503,21 @@ end
 # function to extract all quartets from net according
 # to the array of quartets of a Data object
 # it updates expCF, hasEdge, indexht
-function extractQuartet!(net::HybridNetwork, quartet::Vector{Quartet})
-    DEBUG && println("EXTRACT: begins extract quartets for network")
+ function extractQuartet!(net::HybridNetwork, quartet::Vector{Quartet})
+    DEBUG && println("EXTRACT_1: begins extract quartets for network")
     for(q in quartet)
-        extractQuartet!(net,q)
+        extractQuartet!(net,q);
         qnet = deepcopy(q.qnet); #there is a reason not to mess up with the original q.qnet, i believe to keep ht consistent
         calculateExpCFAll!(qnet);
         q.qnet.expCF = qnet.expCF
     end
 end
 
-extractQuartet!(net::HybridNetwork, d::DataCF) = extractQuartet!(net, d.quartet)
+ extractQuartet!(net::HybridNetwork, d::DataCF) = extractQuartet!(net, d.quartet)
 
 # function to check if there are potential redundant cycles in net
 # return the flag (true=redundant cycle found) and the hybrid node for the redundant cycle
-function hasRedundantCycle(net::Network)
+ function hasRedundantCycle(net::Network)
     length(net.hybrid) == net.numHybrids || error("found net with length net.hybrid of $(length(net.hybrid)) and net.numHybrids of $(net.numHybrids)")
     if(net.numHybrids > 0)
         for(h in net.hybrid)
@@ -532,7 +532,7 @@ end
 
 
 # function to delete redundante cycles on all hybrid nodes in net
-function redundantCycle!(net::Network)
+ function redundantCycle!(net::Network)
     length(net.hybrid) == net.numHybrids || error("found net with length net.hybrid of $(length(net.hybrid)) and net.numHybrids of $(net.numHybrids)")
     if(length(net.hybrid) > 0)
         redCycle, node = hasRedundantCycle(net)
@@ -551,7 +551,7 @@ end
 
 # function to delete redundant cycles (k=1,k=2), see ipad notes
 # warning: should not modify the quartet too much because we need to extract ht afterwards
-function redundantCycle!(net::Network,n::Node)
+ function redundantCycle!(net::Network,n::Node)
     n.hybrid || error("cannot clean a cycle on a tree node $(n.number)")
     edges = hybridEdges(n)
     edges[1].hybrid && edges[2].hybrid || error("hybrid node $(n.number) does not have two hybrid edges $(edges[1].number), $(edges[2].number)")
@@ -588,7 +588,7 @@ function redundantCycle!(net::Network,n::Node)
 end
 
 # function to delete an internal node with only one edge
-function removeNoLeaf!(net::Network,n::Node)
+ function removeNoLeaf!(net::Network,n::Node)
     !n.leaf || error("node $(n.number) is a leaf, so we cannot remove it")
     length(n.edge) == 1 || error("node $(n.number) has $(length(n.edge)) edges (not 1), so we do not have to remove it")
     node = getOtherNode(n.edge[1],n)
@@ -601,7 +601,7 @@ end
 # function to do a while for removeNoLeaf
 # warning: we do not want to remove edges because we need to know
 # exactly which edges in qnet are affected by changes in net.ht
-function removeNoLeafWhile!(net::Network,n::Node)
+ function removeNoLeafWhile!(net::Network,n::Node)
     while(!n.leaf && length(n.edge)==1)
         n = removeNoLeaf!(net,n)
     end
@@ -609,7 +609,7 @@ function removeNoLeafWhile!(net::Network,n::Node)
 end
 
 # Function to check that external edges do not have nodes with only two edges
-function cleanExtEdges!(net::Network)
+ function cleanExtEdges!(net::Network)
 #    if(net.numHybrids > 0)
         for(l in net.leaf)
             length(l.edge) == 1 || error("leaf $(l.number) with $(length(l.edge)) edges, not 1")
@@ -622,7 +622,7 @@ end
 # it fixes other1,other2 for internal nodes with only 2 edges (one external),
 # returns other1, other2 if they are internal nodes with only one edge
 # returns array of nodes (to avoid treating o1,o2 as a tuple later)
-function removeLoneHybrid!(net::Network, n::Node)
+ function removeLoneHybrid!(net::Network, n::Node)
     n.hybrid || error("cannot remove a lone hybrid if it is not hybrid: $(n.number)")
     length(n.edge) == 2 || error("hybrid node $(n.number) should have only 2 edges to be deleted, it has $(length(n.edge))")
     (n.edge[1].hybrid && n.edge[2].hybrid) || error("both edges have to be hybrid and they are not both: $(n.edge[1].number), $(n.edge[2].number)")
@@ -668,7 +668,7 @@ function removeLoneHybrid!(net::Network, n::Node)
     end
 end
 
-function removeWeirdNode!(net::Network,n::Node)
+ function removeWeirdNode!(net::Network,n::Node)
     other = nothing
     DEBUG && println("calling removeWeirdNode in node $(n.number)")
     if(length(n.edge) == 1 && !n.leaf)
@@ -685,7 +685,7 @@ end
 
 # function to remove internal nodes with only one edge
 # keep deleting those nodes, and hybrid nodes without descendants
-function removeWeirdNodes!(net::Network, n::Node)
+ function removeWeirdNodes!(net::Network, n::Node)
     DEBUG && println("calling removeWeirdNodes in node $(n.number)")
     list = Node[]
     push!(list,n)
@@ -719,7 +719,7 @@ end
 # sets the node.typeHyb (1,2,3,4,5 see ipad notes) and pushes into qnet.typeHyb
 # sets node.prev = other to keep track of the "other" node
 # fixit: I think qnet.typeHyb is never used
-function identifyQuartet!(qnet::QuartetNetwork, node::Node)
+ function identifyQuartet!(qnet::QuartetNetwork, node::Node)
     node.hybrid || error("cannot identify the hybridization around node $(node.number) because it is not hybrid node.")
     k = sum([(n.inCycle == node.number && size(n.edge,1) == 3) ? 1 : 0 for n in qnet.node])
     node.k = k
@@ -782,7 +782,7 @@ end
 
 # function to identify the Quartet network as
 # 1 (equivalent to tree), 2 (minor CF different)
-function identifyQuartet!(qnet::QuartetNetwork)
+ function identifyQuartet!(qnet::QuartetNetwork)
     #if(qnet.which == -1)
         if(qnet.numHybrids == 0)
             qnet.which = 1
@@ -817,7 +817,7 @@ end
 
 # function that will get rid of internal nodes with only
 # two edges for all three directions of a node
-function cleanUpNode!(net::Network,node::Node)
+ function cleanUpNode!(net::Network,node::Node)
     edge1,edge2,edge3 = hybridEdges(node)
     deleteIntLeafWhile!(net,getOtherNode(edge1,node),node)
     deleteIntLeafWhile!(net,getOtherNode(edge2,node),node)
@@ -831,7 +831,7 @@ end
 # input: quartet network,
 #        node correspond to the hybrid node
 #        internal: true if loop is in internal edge
-function eliminateLoop!(qnet::QuartetNetwork, node::Node, internal::Bool)
+ function eliminateLoop!(qnet::QuartetNetwork, node::Node, internal::Bool)
     node.hybrid || error("cannot eliminate loop around node $(node.number) since it is not hybrid")
     edge1,edge2,edge3 = hybridEdges(node)
     deleteIntLeafWhile!(qnet, edge1, node)
@@ -856,7 +856,7 @@ function eliminateLoop!(qnet::QuartetNetwork, node::Node, internal::Bool)
 end
 
 # aux function to identify intermediate edge between two nodes
-function intermediateEdge(node1::Node,node2::Node)
+ function intermediateEdge(node1::Node,node2::Node)
     edge = nothing
     for(e in node1.edge)
         if(isEqual(getOtherNode(e,node1),node2))
@@ -874,7 +874,7 @@ end
 #        node, other nodes in the hybridization
 #        case: 1 (global case 2),2 (global case 4), 1 (global case 5)
 # warning: special treatment for bad diamond II
-function eliminateTriangle!(qnet::QuartetNetwork, node::Node, other::Node, case::Integer)
+ function eliminateTriangle!(qnet::QuartetNetwork, node::Node, other::Node, case::Integer)
     #println("start eliminateTriangle----")
     node.hybrid || error("cannot eliminate triangle around node $(node.number) since it is not hybrid")
     #println("hybrid node is $(node.number), with edges $([e.number for e in node.edge]), with gammas $([e.gamma for e in node.edge])")
@@ -931,7 +931,7 @@ end
 # function to polish quartet with hybridization type 5
 # (2 minor CF different) and calculate the expCF
 # CF calculated in the order 12|34, 13|24, 14|23 of the qnet.quartet.taxon
-function quartetType5!(qnet::QuartetNetwork, node::Node)
+ function quartetType5!(qnet::QuartetNetwork, node::Node)
     (node.hybrid && node.typeHyb == 5) || error("cannot polish the quartet type 5 hybridization since either the node is not hybrid: $(!node.hybrid) or it has type $(node.typeHyb), different than 5")
     edge1,edge2,edge3 = hybridEdges(node);
     if(!node.isBadDiamondI)
@@ -1020,7 +1020,7 @@ end
 
 # function to eliminate a hybridization around a given
 # hybrid node
-function eliminateHybridization!(qnet::QuartetNetwork, node::Node)
+ function eliminateHybridization!(qnet::QuartetNetwork, node::Node)
     node.hybrid || error("cannot eliminate hybridization around node $(node.number) since it is not hybrid node")
     if(node.typeHyb == 1)
         eliminateLoop!(qnet,node,false)
@@ -1040,7 +1040,7 @@ end
 # aux function to eliminate all internal nodes with only
 # two edges in a quartet network with qnet.which=1
 # eliminate internal nodes in every direction
-function internalLength!(qnet::QuartetNetwork)
+ function internalLength!(qnet::QuartetNetwork)
     if(qnet.which == 1)
         try
             getIndex(true,[size(n.edge,1) == 3 for n in qnet.node])
@@ -1081,7 +1081,7 @@ end
 # first step to later calculate expCF
 # input: quartet network
 # fixit: need to add a loop, eliminate type1 until there are none, and then identify again
-function eliminateHybridization!(qnet::QuartetNetwork)
+ function eliminateHybridization!(qnet::QuartetNetwork)
     qnet.which != -1 || error("qnet which has to be updated by now to 1 or 2, and it is $(qnet.which)")
     if(qnet.numHybrids == 1)
         eliminateHybridization!(qnet,qnet.hybrid[1])
@@ -1121,7 +1121,7 @@ end
 # input: qnet, taxon1,taxon2
 # returns leaf for taxon1, leaf for taxon2 (i.e. 12)
 # warning: assumes that the numbers for the taxon in the output.csv table are the names
-function whichLeaves(qnet::QuartetNetwork, taxon1::ASCIIString, taxon2::ASCIIString, leaf1::Node, leaf2::Node, leaf3::Node, leaf4::Node)
+ function whichLeaves(qnet::QuartetNetwork, taxon1::ASCIIString, taxon2::ASCIIString, leaf1::Node, leaf2::Node, leaf3::Node, leaf4::Node)
     if(taxon1 == qnet.names[leaf1.number])
         if(taxon2 == qnet.names[leaf2.number])
             return 1,2
@@ -1172,7 +1172,7 @@ end
 # [1,1,2,2] that says in which side of the split is each leaf
 # warning: it needs to be run after eliminating hybridization and uniting
 # internal edge
-function updateSplit!(qnet::QuartetNetwork)
+ function updateSplit!(qnet::QuartetNetwork)
     if(qnet.which == 1)
         if(qnet.split == [-1,-1,-1,-1])
             qnet.split = [2,2,2,2]
@@ -1195,7 +1195,7 @@ end
 # for qnet.expCF[1,2,3] depending on the order of taxa in
 # qnet.quartet
 # warning: needs qnet.split updated already
-function updateFormula!(qnet::QuartetNetwork)
+ function updateFormula!(qnet::QuartetNetwork)
     if(qnet.which == 1)
         if(qnet.formula == [-1,-1,-1])
             qnet.split != [-1,-1,-1,-1] || error("cannot update qnet.formula if qnet.split is not updated: $(qnet.split)")
@@ -1220,7 +1220,7 @@ end
 
 # function to calculate expCF for a quartet network
 # warning: needs qnet.formula and qnet.t1 already updated
-function calculateExpCF!(qnet::QuartetNetwork)
+ function calculateExpCF!(qnet::QuartetNetwork)
     if(qnet.which == 1)
         if(qnet.formula != [-1,-1,-1] && qnet.t1 != -1)
             for(i in 1:3)
@@ -1244,7 +1244,7 @@ end
 
 # function to compute all the process of calculating the expCF
 # for a given qnet
-function calculateExpCFAll!(qnet::QuartetNetwork)
+ function calculateExpCFAll!(qnet::QuartetNetwork)
     identifyQuartet!(qnet)
     eliminateHybridization!(qnet)
     updateSplit!(qnet)
@@ -1255,7 +1255,7 @@ end
 # function to calculate expCF for all the quartets in data
 # after extractQuartet(net,data) that updates quartet.qnet
 # warning: only updates expCF for quartet.changed=true
-function calculateExpCFAll!(data::DataCF)
+ function calculateExpCFAll!(data::DataCF)
     !all((q->(q.qnet.numTaxa != 0)), data.quartet) ? error("qnet in quartets on data are not correctly updated with extractQuartet") : nothing
     #warn("assume the numbers for the taxon read from the observed CF table match the numbers given to the taxon when creating the object network")
     for(q in data.quartet)
@@ -1273,7 +1273,7 @@ end
 # first updates the edge lengths according to x
 # warning: assumes qnet.indexht is updated already
 # warning: only updates expCF for quartet.qnet.changed=true
-function calculateExpCFAll!(data::DataCF, x::Vector{Float64},net::HybridNetwork)
+ function calculateExpCFAll!(data::DataCF, x::Vector{Float64},net::HybridNetwork)
     !all((q->(q.qnet.numTaxa != 0)), data.quartet) ? error("qnet in quartets on data are not correctly updated with extractQuartet") : nothing
     #println("calculateExpCFAll in x: $(x) with net.ht $(net.ht)")
     for(q in data.quartet)
@@ -1339,7 +1339,7 @@ end
 # sum_i=1,2,3 (obsCF_i)*log(expCF_i/obsCF_i)
 # warning: assumes that quartet.qnet is already updated with extractQuartet and
 #          calculateExpCF
-function logPseudoLik(quartet::Quartet)
+ function logPseudoLik(quartet::Quartet)
     sum(quartet.qnet.expCF) != 0.0 || error("expCF not updated for quartet $(quartet.number)")
     #DEBUG && println("quartet= $(quartet.taxon), obsCF = $(quartet.obsCF), expCF = $(quartet.qnet.expCF)")
     suma = 0
@@ -1364,7 +1364,7 @@ end
 # sum_q [sum_i=1,2,3 (obsCF_i)*log(expCF_i)]
 # warning: assumes that quartet.qnet is already updated with extractQuartet and
 #          calculateExpCF for all quartets
-function logPseudoLik(quartet::Array{Quartet,1})
+ function logPseudoLik(quartet::Array{Quartet,1})
     suma = 0
     for(q in quartet)
         suma += logPseudoLik(q)

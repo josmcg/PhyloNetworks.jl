@@ -14,6 +14,7 @@ using StatsBase: sample
 
 import Base.show
 import Gadfly.plot
+import Combinatorics
 
 global DEBUG = false #for debugging only
 const DEBUGC = false #more detailed prints

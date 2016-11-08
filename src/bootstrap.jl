@@ -386,13 +386,7 @@ function bootsnaq(startnet::HybridNetwork, data::Union{DataFrame,Vector{Vector{H
     if(isdefined(:originald) && !isempty(originald.repSpecies)) ## not defined if treefile empty, but not needed
         expandLeaves!(originald.repSpecies,startnet)
     end
-
-    if(nprocs() > 1) #more than 1 processor, still not working
-        error("bootsnaq not implemented for parallelization yet")
-        optTopRunsBootParallel(startnet,data,hmax, liktolAbs, Nfail,ftolRel, ftolAbs, xtolRel, xtolAbs, verbose, closeN, Nmov0, runs, outgroup, filename, seed, probST, nrep, prcnet, bestNet)
-    else
-        optTopRunsBoot(startnet,data,hmax, liktolAbs, Nfail,ftolRel, ftolAbs, xtolRel, xtolAbs, verbose, closeN, Nmov0, runs1, outgroup, filename, seed, probST, nrep, runs2, otherNet, quartetfile)
-    end
+			optTopRunsBoot(startnet,data,hmax, liktolAbs, Nfail,ftolRel, ftolAbs, xtolRel, xtolAbs, verbose, closeN, Nmov0, runs1, outgroup, filename, seed, probST, nrep, runs2, otherNet, quartetfile)
 end
 
 
@@ -990,7 +984,7 @@ function hybridBootstrapSupport(nets::Vector{HybridNetwork}, refnet::HybridNetwo
     nkeepc = sum(keepc)
     # clade descriptions
     resCluster = DataFrame(taxa=taxa)
-    cladestr = Array(ASCIIString,length(clade))
+    cladestr = Array(String,length(clade))
     rowh = 1
     for h=1:length(clade)
         nn = treenode[h] # node number in ref net
@@ -1006,7 +1000,7 @@ function hybridBootstrapSupport(nets::Vector{HybridNetwork}, refnet::HybridNetwo
         end
         if keepc[h]
             rowh += 1
-            insert!(resCluster, rowh, clade[h], symbol(cladestr[h]))
+            insert!(resCluster, rowh, clade[h], Symbol(cladestr[h]))
         end
     end
     # node summaries

@@ -1,3 +1,4 @@
+
 # functions to read/write networks topologies
 # originally in functions.jl
 # Claudia March 2015
@@ -1218,3 +1219,4 @@ function writeTopology(net::HybridNetwork, s::IO,
     # names = true: to print leaf names (labels), not numbers
     ## printID = false: print all branch lengths, not just identifiable ones
 end
+

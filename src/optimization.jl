@@ -277,7 +277,7 @@ function optBL!(net::HybridNetwork, d::DataCF, verbose::Bool, ftolRel::Float64, 
     global DEBUG
     (ftolRel > 0 && ftolAbs > 0 && xtolAbs > 0 && xtolRel > 0) || error("tolerances have to be positive, ftol (rel,abs), xtol (rel,abs): $([ftolRel, ftolAbs, xtolRel, xtolAbs])")
     (DEBUG || verbose) && println("OPTBL: begin branch lengths and gammas optimization, ftolAbs $(ftolAbs), ftolRel $(ftolRel), xtolAbs $(xtolAbs), xtolRel $(xtolRel)")
-    ht = parameters!(net); # branches/gammas to optimize: net.ht, net.numht
+    ht = parameters!(net) # branches/gammas to optimize: net.ht, net.numht
     extractQuartet!(net,d) # quartets are all updated: hasEdge, expCF, indexht
     k = length(net.ht)
     net.numBad >= 0 || error("network has negative number of bad hybrids")
@@ -902,8 +902,8 @@ function proposedTop!(move::Integer, newT::HybridNetwork,random::Bool, count::In
     DEBUG && println("success $(success), movescount (add,mvorigin,mvtarget,chdir,delete,nni) proposed: $(movescount[1:6]); successful: $(movescount[7:12]); movesfail: $(movesfail)")
     !success || return true
     DEBUG && println("new proposed topology failed in step $(count) for move $(int2move[move])")
-    DEBUG && printEverything(newT)
-    CHECKNET && checkNet(newT)
+    #DEBUG && printEverything(newT)
+    #CHECKNET && checkNet(newT)
     return false
 end
 
@@ -963,8 +963,8 @@ function optTopLevel!(currT::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
         redirect_stdout(sout)
         redirect_stderr(sout)
     end
-    DEBUG && printEverything(currT)
-    CHECKNET && checkNet(currT)
+    #DEBUG && printEverything(currT)
+    #CHECKNET && checkNet(currT)
     count = 0
     movescount = zeros(Int,18) #1:6 number of times moved proposed, 7:12 number of times success move (no intersecting cycles, etc.), 13:18 accepted by loglik
     movesgamma = zeros(Int,13) #number of moves to fix gamma zero: proposed, successful, movesgamma[13]: total accepted by loglik
@@ -1146,8 +1146,8 @@ function moveDownLevel!(net::HybridNetwork)
     global CHECKNET, DEBUG
     !isTree(net) ||error("cannot delete hybridization in a tree")
     DEBUG && println("MOVE: need to go down one level to h-1=$(net.numHybrids-1) hybrids because of conflicts with gamma=0,1")
-    DEBUG && printEverything(net)
-    CHECKNET && checkNet(net)
+    #DEBUG && printEverything(net)
+    #CHECKNET && checkNet(net)
     nh = net.ht[1 : net.numHybrids - net.numBad]
     k = sum([e.istIdentifiable ? 1 : 0 for e in net.edge])
     nt = net.ht[net.numHybrids - net.numBad + 1 : net.numHybrids - net.numBad + k]
@@ -1205,8 +1205,8 @@ function moveDownLevel!(net::HybridNetwork)
             i += 2
         end
     end
-    DEBUG && printEverything(net)
-    CHECKNET && checkNet(net)
+    #DEBUG && printEverything(net)
+    #CHECKNET && checkNet(net)
 end
 
 # checks if there are problems in estimated net.ht:
@@ -1335,8 +1335,8 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
       writelog = false
       logfile = STDOUT # used in call to optTopRun1!
     end
-
-    str = """optimization of topology, BL and inheritance probabilities using:
+		# load everything to all processors
+		    str = """optimization of topology, BL and inheritance probabilities using:
               hmax = $(hmax),
               tolerance parameters: ftolRel=$(ftolRel), ftolAbs=$(ftolAbs),
                                     xtolAbs=$(xtolAbs), xtolRel=$(xtolRel).
@@ -1375,7 +1375,8 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
     seeds = [seed;round(Integer,floor(rand(runs-1)*100000))]
 
     tic();
-    for(i in 1:runs)
+		nets = RemoteChannel(()->Channel{Any}(runs),myid())
+    @sync @parallel for(i in 1:runs)
         writelog && write(logfile,"seed: $(seeds[i]) for run $(i)\n$(Libc.strftime(time()))\n")
         writelog && flush(logfile)
         print(STDOUT,"seed: $(seeds[i]) for run $(i)\n")
@@ -1394,12 +1395,13 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
               end
             flush(logfile)
             end
-            push!(bestnet, best)
-            if(best.loglik < maxNet.loglik)
-                maxNet = best
-            end
+            put!(nets, best)
             DEBUG && println("typeof maxNet $(typeof(maxNet)), -loglik of maxNet $(maxNet.loglik)")
         catch(err)
+						stack = stacktrace()
+						for line in stack
+							println(line)
+						end
             if (writelog)
             write(logfile,"\n ERROR found on SNaQ for run $(i) seed $(seeds[i]): $(err)")
             flush(logfile)
@@ -1413,6 +1415,22 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
         writelog && write(logfile,"\n---------------------\n")
         writelog && flush(logfile)
     end
+		net_list = Array{Any}(runs)
+		while isready(nets)
+			push!(net_list, take!(nets))
+			sleep(90)
+		end
+
+		i::Int = 1
+		while i <= length(net_list)
+			if !isdefined(net_list, i)
+				deleteat!(net_list, i)
+			else
+				i+=1
+			end
+		end
+		assert length(net_list) > 1
+		maxNet = sort(net_list,by = x->x.loglik, rev = true)[1]
     t=toc();
     if (writelog)
     write(errfile, "\n Total errors: $(length(failed)) in seeds $(failed)")
@@ -1706,7 +1724,6 @@ function snaqDebug(currT0::HybridNetwork, d::DataCF; hmax=1::Integer, liktolAbs=
     flag = checkNet(currT0,true)
     flag && error("starting topology suspected not level-1")
 
-    global DEBUG, REDIRECT
     debuglog = string(rootname,".debug.log")
     if (debug) DEBUG = true; end
     if (redirect)
@@ -1741,5 +1758,4 @@ function snaqDebug(currT0::HybridNetwork, d::DataCF; hmax=1::Integer, liktolAbs=
     if (redirect) REDIRECT = false; end
     return res
 end
-
 

@@ -7,7 +7,6 @@
 # for development and tests only.
 
 # needed modules:
-
 using Base.Collections # for updateInCycle with priority queue
 using DataFrames # for rep function and read/write csv tables
 using GLM # for the lm function
