@@ -1376,7 +1376,7 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
 
     tic();
 		nets = RemoteChannel(()->Channel{Any}(runs),myid())
-    @sync @parallel for(i in 1:runs)
+    @sync @parallel for i in 1:runs
         writelog && write(logfile,"seed: $(seeds[i]) for run $(i)\n$(Libc.strftime(time()))\n")
         writelog && flush(logfile)
         print(STDOUT,"seed: $(seeds[i]) for run $(i)\n")
@@ -1429,7 +1429,6 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
 				i+=1
 			end
 		end
-		assert length(net_list) > 1
 		maxNet = sort(net_list,by = x->x.loglik, rev = true)[1]
     t=toc();
     if (writelog)
