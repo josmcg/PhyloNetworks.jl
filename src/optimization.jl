@@ -1096,6 +1096,8 @@ function optTopLevel!(currT::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
     if(CHECKNET && !isempty(d.repSpecies))
         checkTop4multAllele(newT) || error("newT not suitable for multiple alleles at the very end")
     end
+		print("optTopLevel created $(writeTopology(newT, round =true))\n")
+		print("with LogLik: $(newT.loglik)\n")
     return newT
 end
 
@@ -1370,65 +1372,13 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
     if (writelog)
       write(logfile,"\nmain seed $(seed)\n")
       flush(logfile)
-    else print(STDOUT,"\nmain seed $(seed)\n"); end
-    srand(seed)
-    seeds = [seed;round(Integer,floor(rand(runs-1)*100000))]
-
-    tic();
-		nets = RemoteChannel(()->Channel{Any}(runs),myid())
-    @sync @parallel for i in 1:runs
-        writelog && write(logfile,"seed: $(seeds[i]) for run $(i)\n$(Libc.strftime(time()))\n")
-        writelog && flush(logfile)
-        print(STDOUT,"seed: $(seeds[i]) for run $(i)\n")
-        gc();
-        try
-            writelog && write(logfile,"\n BEGIN SNaQ for run $(i), seed $(seeds[i]) and hmax $(hmax)")
-            verbose && print(STDOUT,"\n BEGIN SNaQ for run $(i), seed $(seeds[i]) and hmax $(hmax)")
-            best = optTopRun1!(currT0, liktolAbs, Nfail, d, hmax,ftolRel, ftolAbs, xtolRel, xtolAbs, verbose, closeN , Nmov0,seeds[i],logfile,writelog,probST);
-            writelog && write(logfile,"\n FINISHED SNaQ for run $(i), -loglik of best $(best.loglik)\n")
-            verbose && print(STDOUT,"\n FINISHED SNaQ for run $(i), -loglik of best $(best.loglik)\n")
-            if (writelog)
-              if(outgroup == "none")
-                write(logfile,writeTopologyLevel1(best,printID=true, multall=!isempty(d.repSpecies))) #no outgroup
-              else
-                write(logfile,writeTopologyLevel1(best,outgroup=outgroup, printID=true, multall=!isempty(d.repSpecies))) #outgroup
-              end
-            flush(logfile)
-            end
-            put!(nets, best)
-            DEBUG && println("typeof maxNet $(typeof(maxNet)), -loglik of maxNet $(maxNet.loglik)")
-        catch(err)
-						stack = stacktrace()
-						for line in stack
-							println(line)
-						end
-            if (writelog)
-            write(logfile,"\n ERROR found on SNaQ for run $(i) seed $(seeds[i]): $(err)")
-            flush(logfile)
-            write(errfile,"\n ERROR found on SNaQ for run $(i) seed $(seeds[i]): $(err)")
-            flush(errfile)
-            push!(failed,seeds[i])
-            else
-                warn("\n ERROR found on SNaQ for run $(i) seed $(seeds[i]): $(err)")
-            end
-        end
-        writelog && write(logfile,"\n---------------------\n")
-        writelog && flush(logfile)
-    end
-		net_list = Array{Any}(runs)
-		while isready(nets)
-			push!(net_list, take!(nets))
-			sleep(90)
+    else 
+			print(STDOUT,"\nmain seed $(seed)\n") 
 		end
-
-		i::Int = 1
-		while i <= length(net_list)
-			if !isdefined(net_list, i)
-				deleteat!(net_list, i)
-			else
-				i+=1
-			end
-		end
+    seeds = [seed;round(Integer,floor(rand(runs-1)*100000))] 
+		print(seeds)
+	tic();
+		net_list = pmap((seed)-> optTopRun1!(currT0, liktolAbs, Nfail, d, hmax,ftolRel, ftolAbs, xtolRel, xtolAbs, verbose, closeN , Nmov0,seed,logfile,writelog,probST), seeds);
 		maxNet = sort(net_list,by = x->x.loglik, rev = true)[1]
     t=toc();
     if (writelog)
