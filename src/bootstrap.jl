@@ -258,6 +258,9 @@ function optTopRunsBoot(currT0::HybridNetwork, data::Union{DataFrame,Vector{Vect
             end
         end
         if (runs1>0 && runs2>0)
+						print("checking nets\n")
+						print("\n $(writeTopology(net1, round=true)) with lolglik $(net1.loglik)\n")
+						print("\n $(writeTopology(net2, round=true)) with loglik $(net2.loglik)\n")
             net = (net1.loglik < net2.loglik ? net1 : net2)
         end
         writelog && flush(logfile)

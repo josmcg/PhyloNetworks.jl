@@ -1096,8 +1096,6 @@ function optTopLevel!(currT::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
     if(CHECKNET && !isempty(d.repSpecies))
         checkTop4multAllele(newT) || error("newT not suitable for multiple alleles at the very end")
     end
-		print("optTopLevel created $(writeTopology(newT, round =true))\n")
-		print("with LogLik: $(newT.loglik)\n")
     return newT
 end
 
@@ -1337,7 +1335,6 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
       writelog = false
       logfile = STDOUT # used in call to optTopRun1!
     end
-		# load everything to all processors
 		    str = """optimization of topology, BL and inheritance probabilities using:
               hmax = $(hmax),
               tolerance parameters: ftolRel=$(ftolRel), ftolAbs=$(ftolAbs),
@@ -1380,7 +1377,7 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
 		tic();
 		net_list = pmap((seed)-> optTopRun1!(currT0, liktolAbs, Nfail, d, hmax,ftolRel, ftolAbs, xtolRel, xtolAbs, verbose, closeN , Nmov0,seed,logfile,writelog,probST), seeds);
 		bestnet = copy(net_list)
-		maxNet = sort(net_list,by = x->x.loglik, rev = true)[1]
+		maxNet = sort(net_list,by = x->x.loglik)[1]
     t=toc();
     if (writelog)
     write(errfile, "\n Total errors: $(length(failed)) in seeds $(failed)")

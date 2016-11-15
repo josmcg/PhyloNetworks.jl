@@ -63,5 +63,8 @@ for i=1:13 push!(boottrees, readMultiTopology(treefile)) end
 for i=1:13 @test size(boottrees[i])==(10,) end # 10 bootstrap trees for each of 13 "genes"
 bootnet = bootsnaq(T,boottrees,nrep=2,runs=4,otherNet=net1,seed=1234,prcnet=0.5,filename="")
 @test size(bootnet)==(2,)
+for i =1:length(bootnet)
+	print(writeTopology(bootnet[i], round =true))
+end
 @test writeTopology(bootnet[1], round=true)=="((((2,(1)#H7:::0.678):1.774,4):0.235,3):0.899,5,(6,#H7:::0.322):10.0);"
 @test writeTopology(bootnet[2], round=true)=="(((5,(6,#H7:::0.249):10.0):0.688,3):0.373,(2,(1)#H7:::0.751):1.559,4);"
