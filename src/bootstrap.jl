@@ -212,46 +212,47 @@ function optTopRunsBoot(currT0::HybridNetwork, data::Union{DataFrame,Vector{Vect
     writelog && flush(logfile)
     srand(seed)
     seedsData = round(Int,floor(rand(nrep)*100000)) # seeds to sample bootstrap data
-    if runs1>0
-        seeds = round(Int,floor(rand(nrep)*100000)) # seeds for all optimizations from currT0
-    end
-    if runs2>0
-      seedsOtherNet = round(Int,floor(rand(nrep)*100000)) # for runs starting from other net
-    end
+		seeds = round(Int,floor(rand(nrep)*100000)) # seeds for all optimizations from currT0
+    seedsOtherNet = round(Int,floor(rand(nrep)*100000)) # for runs starting from other net
 
     bootNet = HybridNetwork[]
 
     writelog && write(logfile,"\nBEGIN: $(nrep) replicates\n$(Libc.strftime(time()))\n")
     writelog && flush(logfile)
-    for i in 1:nrep
-        str = "\nbegin replicate $(i)\nbootstrap data simulation: seed $(seedsData[i])\n"
+		masterArray = Array{Tuple{ Integer, Integer, Integer}}(nrep)
+		for i=1:nrep
+			setindex!(masterArray,  (seeds[i], seedsOtherNet[i], seedsData[i]),i)
+		end
+    bootNet = pmap((tup::Tuple{ Integer, Integer, Integer}, i::Integer)-> begin
+        str = "\nbegin replicate \nbootstrap data simulation: seed $(seedsData)\n"
         writelog && write(logfile, str)
+				seeds , seedsOther, seedsData = tup
         print(str)
         if !inputastrees
-            sampleCFfromCI!(newdf, seedsData[i])
+            sampleCFfromCI!(newdf, seedsData)
             readTableCF!(newd, newdf, [5,6,7])
         else
-            sampleBootstrapTrees!(newtrees, data, seed=seedsData[i])
+            sampleBootstrapTrees!(newtrees, data, seed=seedsData)
             calculateObsCFAll!(newd,taxa) # do not use readTrees2CF: to save memory and gc time
         end
         if runs1>0
-            str = "estimation, $runs1 run" * (runs1>1?"s":"") * ": seed $(seeds[i])\n"
+            str = "estimation, $runs1 run" * (runs1>1?"s":"") * ": seed $(seeds)\n"
             writelog && write(logfile, str)
             print(str)
             rootname = (DEBUG ? string(filename,"_",i) : "")
             net1 = optTopRuns!(currT0, liktolAbs, Nfail, newd, hmax,ftolRel, ftolAbs, xtolRel, xtolAbs, verbose, closeN, Nmov0, runs1, outgroup,
-                               rootname,seeds[i],probST)
+                               rootname,seeds,probST)
             if runs2==0
                 net = net1
             end
         end
         if runs2>0
-            str = "estimation, $runs2 run" * (runs2>1?"s":"") * " starting from other net: seed $(seedsOtherNet[i])\n"
+            str = "estimation, $runs2 run" * (runs2>1?"s":"") * " starting from other net: seed $(seedsOtherNet)\n"
             writelog && write(logfile, str)
             print(str)
             rootname = (DEBUG ? string(filename,"_",i,"_startNet2") : "")
             net2 = optTopRuns!(bestNet, liktolAbs, Nfail, newd, hmax,ftolRel, ftolAbs, xtolRel, xtolAbs, verbose, closeN, Nmov0, runs2, outgroup,
-                               rootname,seedsOtherNet[i],probST)
+                               rootname,seedsOther,probST)
             if runs1==0
                 net = net2
             end
@@ -261,7 +262,6 @@ function optTopRunsBoot(currT0::HybridNetwork, data::Union{DataFrame,Vector{Vect
         end
         writelog && flush(logfile)
 
-        push!(bootNet, net)
         str = (outgroup=="none" ? writeTopologyLevel1(net) : writeTopologyLevel1(net,outgroup))
         if writelog
             write(logfile, str)
@@ -269,7 +269,8 @@ function optTopRunsBoot(currT0::HybridNetwork, data::Union{DataFrame,Vector{Vect
             flush(logfile)
         end
         println(str) # net also printed by each optTopRuns! but separately from the 2 starting points
-    end # of the nrep bootstrap replicates
+				return net
+    end, masterArray, 1:nrep) # of the nrep bootstrap replicates
     writelog && close(logfile)
 
     if writelog

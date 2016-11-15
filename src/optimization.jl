@@ -1377,8 +1377,9 @@ function optTopRuns!(currT0::HybridNetwork, liktolAbs::Float64, Nfail::Integer, 
 		end
     seeds = [seed;round(Integer,floor(rand(runs-1)*100000))] 
 		print(seeds)
-	tic();
+		tic();
 		net_list = pmap((seed)-> optTopRun1!(currT0, liktolAbs, Nfail, d, hmax,ftolRel, ftolAbs, xtolRel, xtolAbs, verbose, closeN , Nmov0,seed,logfile,writelog,probST), seeds);
+		bestnet = copy(net_list)
 		maxNet = sort(net_list,by = x->x.loglik, rev = true)[1]
     t=toc();
     if (writelog)
