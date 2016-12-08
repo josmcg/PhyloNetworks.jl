@@ -211,6 +211,11 @@ function optTopRunsBoot(currT0::HybridNetwork, data::Union{DataFrame,Vector{Vect
     writelog && write(logfile,"\nmain seed $(seed)\n")
     writelog && flush(logfile)
     srand(seed)
+		if nprocs() > 1
+			for i = 2:nprocs()
+				remotecall_wait(srand,i, seed)	
+			end
+		end
     seedsData = round(Int,floor(rand(nrep)*100000)) # seeds to sample bootstrap data
 		seeds = round(Int,floor(rand(nrep)*100000)) # seeds for all optimizations from currT0
     seedsOtherNet = round(Int,floor(rand(nrep)*100000)) # for runs starting from other net
@@ -224,9 +229,9 @@ function optTopRunsBoot(currT0::HybridNetwork, data::Union{DataFrame,Vector{Vect
 			setindex!(masterArray,  (seeds[i], seedsOtherNet[i], seedsData[i]),i)
 		end
     bootNet = pmap((tup::Tuple{ Integer, Integer, Integer}, i::Integer)-> begin
+				seeds , seedsOther, seedsData = tup
         str = "\nbegin replicate \nbootstrap data simulation: seed $(seedsData)\n"
         writelog && write(logfile, str)
-				seeds , seedsOther, seedsData = tup
         print(str)
         if !inputastrees
             sampleCFfromCI!(newdf, seedsData)
@@ -394,50 +399,6 @@ function bootsnaq(startnet::HybridNetwork, data::Union{DataFrame,Vector{Vector{H
 end
 
 
-# same as optTopRunsBoot but for many processors in parallel
-# warning: still not debugged
-function optTopRunsBootParallel(currT0::HybridNetwork, df::DataFrame, hmax::Integer, liktolAbs::Float64, Nfail::Integer,
-                                ftolRel::Float64, ftolAbs::Float64, xtolRel::Float64, xtolAbs::Float64,
-                                verbose::Bool, closeN::Bool, Nmov0::Vector{Int},
-                                runs::Integer, outgroup::AbstractString, filename::AbstractString,
-                                seed::Integer, probST::Float64, nrep::Integer, prcnet::Float64,
-                                bestNet::HybridNetwork)
-    warn("bootsnaq function not debugged yet")
-    prcnet > 0 || error("percentage of times to use the best network as starting topology should be positive: $(prcnet)")
-    prcnet = (prcnet <= 1.0) ? prcnet : prcnet/100
-    println("BOOTSTRAP OF SNAQ ESTIMATION")
-    # shared arrays, variables
-    dfS = convert2SharedArray(df) #fixit: need to code
-    intS = convert2SharedArray(hmax,liktolAbs,Nfail,runs,Nmov0) #fixit: need to code
-    floatS = convert2SharedArray(ftolRel,ftolAbs,xtolRel,xtolAbs,probST,prcnet) #fixit: need to code
-    @everywhere verbose,closeN,outgroup,filename
-
-    # split of replicates
-    nrep_proc = floor(nrep/nworkers())
-    nrep_missing = nrep - nrep_proc * nworkers()
-    bootNet = HybridNetwork[]
-
-    # seeds
-    if(seed == 0)
-        t = time()/1e9
-        a = split(string(t),".")
-        seed = parse(Int,a[2][end-4:end]) #better seed based on clock
-    end
-    srand(seed)
-    seeds = [parse(Int,floor(rand(nworkers())*100000))] #seeds for all workers
-
-
-    @sync begin
-        i = 1
-        for p in workers()
-            addrep = nrep_missing > 0 ? 1 : 0
-            net = @async remotecall_fetch(p,loc_bootsnaq,dfS, intS, floatS, currT, bestNet, seeds[i], nrep_proc+addrep)
-            push!(bootNet,net)
-            nrep_missing -= addrep
-            i += 1
-        end
-    end
-end
 
 # function to the each local run of bootsnaq
 # in optTopRunsBootParallel

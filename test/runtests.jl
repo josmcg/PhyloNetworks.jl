@@ -5,11 +5,13 @@
 # Claudia May 2016
 
 using Base.Test
+push!(LOAD_PATH, realpath("../src"))
 
 if !isdefined(:localtests) localtests = false; end
 
 
 if(!localtests)
+		addprocs(4)
     using PhyloNetworks
     using DataFrames
     PhyloNetworks.setCHECKNET(true)
